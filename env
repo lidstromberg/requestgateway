@@ -1,0 +1,8 @@
+################################
+# REQUEST GATEWAY
+################################
+export LB_DEBUGON='true'
+export GTWAY_GCP_PROJECT='{{PROJECTNAME}}'
+export GTWAY_NAMESP='global'
+export GTWAY_KD='gateway'
+export GTWAY_CLIPOOL='5'
