@@ -122,6 +122,7 @@ func (gt GtwyMgr) Set(ctx context.Context, remoteAddress string) error {
 func (gt GtwyMgr) IsPermitted(ctx context.Context, remoteAddress string) (bool, error) {
 	if EnvDebugOn {
 		lblog.LogEvent("GtwyMgr", "IsPermitted", "info", "start")
+		lblog.LogEvent("GtwyMgr", "IsPermitted", "info", remoteAddress)
 	}
 
 	//check the approval list
@@ -147,7 +148,6 @@ func (gt GtwyMgr) IsPermitted(ctx context.Context, remoteAddress string) (bool, 
 	}
 
 	if EnvDebugOn {
-		lblog.LogEvent("GtwyMgr", "IsPermitted", "info", remoteAddress)
 		lblog.LogEvent("GtwyMgr", "IsPermitted", "info", strconv.Itoa(n))
 		lblog.LogEvent("GtwyMgr", "IsPermitted", "info", "end")
 	}
