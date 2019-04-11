@@ -8,14 +8,13 @@ import (
 
 	"cloud.google.com/go/datastore"
 	"golang.org/x/net/context"
-	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
 //GtwyMgr handles interactions with the datastore
 type GtwyMgr struct {
-	dsclient *datastore.Client
-	Bc       lbcf.ConfigSetting
+	ds *datastore.Client
+	bc lbcf.ConfigSetting
 }
 
 //NewGtwyMgr creates a new gateway manager
@@ -27,14 +26,13 @@ func NewGtwyMgr(ctx context.Context, bc lbcf.ConfigSetting) (*GtwyMgr, error) {
 	}
 
 	datastoreClient, err := datastore.NewClient(ctx, bc.GetConfigValue(ctx, "EnvGtwayGcpProject"), option.WithGRPCConnectionPool(EnvClientPool))
-
 	if err != nil {
 		return nil, err
 	}
 
 	cm1 := &GtwyMgr{
-		dsclient: datastoreClient,
-		Bc:       bc,
+		ds: datastoreClient,
+		bc: bc,
 	}
 
 	if EnvDebugOn {
@@ -44,61 +42,20 @@ func NewGtwyMgr(ctx context.Context, bc lbcf.ConfigSetting) (*GtwyMgr, error) {
 	return cm1, nil
 }
 
-//GetAll returns the whole list
-func (gt GtwyMgr) GetAll(ctx context.Context) ([]*Gateway, error) {
-	if EnvDebugOn {
-		lblog.LogEvent("GtwyMgr", "GetAll", "info", "start")
-	}
-
-	//get the approval list
-	q := datastore.NewQuery(gt.Bc.GetConfigValue(ctx, "EnvGtwayDsKind")).
-		Namespace(gt.Bc.GetConfigValue(ctx, "EnvGtwayDsNamespace")).
-		Limit(1000)
-
-	var gla []*Gateway
-
-	it := gt.dsclient.Run(ctx, q)
-
-	for {
-		gl := &Gateway{}
-		_, err := it.Next(&gl)
-
-		if err == iterator.Done {
-			break
-		}
-
-		if err != nil {
-			if err != datastore.ErrNoSuchEntity {
-				return gla, err
-			}
-		}
-
-		gla = append(gla, gl)
-	}
-
-	if EnvDebugOn {
-		lblog.LogEvent("GtwyMgr", "GetAll", "info", "end")
-	}
-
-	return gla, nil
-}
-
 //Set sets a gateway address
-func (gt GtwyMgr) Set(ctx context.Context, remoteAddress string) error {
+func (gt GtwyMgr) Set(ctx context.Context, appcontext, remoteAddress string) error {
 	if EnvDebugOn {
 		lblog.LogEvent("GtwyMgr", "Set", "info", "start")
 	}
 
-	glst := &Gateway{RemoteAddress: remoteAddress}
+	glst := &Gateway{AppContext: appcontext, RemoteAddress: remoteAddress}
 
-	ky, err := gt.newKey(ctx, gt.Bc.GetConfigValue(ctx, "EnvGtwayDsNamespace"), gt.Bc.GetConfigValue(ctx, "EnvGtwayDsKind"))
-
+	ky, err := gt.newKey(ctx, gt.bc.GetConfigValue(ctx, "EnvGtwayDsNamespace"), gt.bc.GetConfigValue(ctx, "EnvGtwayDsKind"))
 	if err != nil {
 		return err
 	}
 
-	tx, err := gt.dsclient.NewTransaction(ctx)
-
+	tx, err := gt.ds.NewTransaction(ctx)
 	if err != nil {
 		return err
 	}
@@ -119,21 +76,20 @@ func (gt GtwyMgr) Set(ctx context.Context, remoteAddress string) error {
 }
 
 //IsPermitted indicates if the address is approved
-func (gt GtwyMgr) IsPermitted(ctx context.Context, remoteAddress string) (bool, error) {
+func (gt GtwyMgr) IsPermitted(ctx context.Context, appcontext, remoteAddress string) (bool, error) {
 	if EnvDebugOn {
 		lblog.LogEvent("GtwyMgr", "IsPermitted", "info", "start")
-		lblog.LogEvent("GtwyMgr", "IsPermitted", "info", remoteAddress)
 	}
 
 	//check the approval list
-	q := datastore.NewQuery(gt.Bc.GetConfigValue(ctx, "EnvGtwayDsKind")).
-		Namespace(gt.Bc.GetConfigValue(ctx, "EnvGtwayDsNamespace")).
+	q := datastore.NewQuery(gt.bc.GetConfigValue(ctx, "EnvGtwayDsKind")).
+		Namespace(gt.bc.GetConfigValue(ctx, "EnvGtwayDsNamespace")).
+		Filter("appcontext =", appcontext).
 		Filter("remoteaddress =", remoteAddress).
 		KeysOnly()
 
 	//get the count
-	n, err := gt.dsclient.Count(ctx, q)
-
+	n, err := gt.ds.Count(ctx, q)
 	//if there was an error return it and false
 	if err != nil {
 		if err != datastore.ErrNoSuchEntity {
@@ -168,12 +124,50 @@ func (gt GtwyMgr) newKey(ctx context.Context, dsNS, dsKind string) (*datastore.K
 	keys = append(keys, newKey)
 
 	//allocate the ID from datastore
-	keys, err := gt.dsclient.AllocateIDs(ctx, keys)
-
+	keys, err := gt.ds.AllocateIDs(ctx, keys)
 	if err != nil {
 		return nil, err
 	}
 
 	//return only the first key
 	return keys[0], nil
+}
+
+//Delete removes a gateway address
+func (gt GtwyMgr) Delete(ctx context.Context, appcontext, remoteAddress string) error {
+	if EnvDebugOn {
+		lblog.LogEvent("GtwyMgr", "Delete", "info", "start")
+	}
+
+	//check the approval list
+	q := datastore.NewQuery(gt.bc.GetConfigValue(ctx, "EnvGtwayDsKind")).
+		Namespace(gt.bc.GetConfigValue(ctx, "EnvGtwayDsNamespace")).
+		Filter("appcontext =", appcontext).
+		Filter("remoteaddress =", remoteAddress).
+		KeysOnly()
+
+	var arr []Gateway
+	keys, err := gt.ds.GetAll(ctx, q, &arr)
+	if err != nil {
+		return err
+	}
+
+	tx, err := gt.ds.NewTransaction(ctx)
+	if err != nil {
+		return err
+	}
+
+	if err := tx.DeleteMulti(keys); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if _, err = tx.Commit(); err != nil {
+		return err
+	}
+
+	if EnvDebugOn {
+		lblog.LogEvent("GtwyMgr", "Delete", "info", "end")
+	}
+	return nil
 }
