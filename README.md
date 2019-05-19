@@ -1,6 +1,6 @@
 # Request Gateway - address restricting add-on for [auth].
 
-A Go IP address restriction backend utility which uses Google Cloud Platform Datastore. Intended to be used in conjunction with [auth].
+This package is a GCP Datastore controlled IP Address access controller. It can be plugged into AppEngine services in order to deliver service specific IP restriction. Works with or instead of the AppEngine Firewall. Originally written for use with [auth].
 
 ## What?
 This is a fairly rudimentary backend client which persists a list of approved address names (IPs, hostnames, whatever you want to use to differentiate), and will provide a boolean check to indicate if a given address name is on the approved list.
@@ -48,11 +48,28 @@ Change LB_DEBUGON to true/false if you want verbose logging on/off. The other va
 ################################
 # REQUEST GATEWAY
 ################################
-export LB_DEBUGON='true'
+export GTWAY_DEBUGON='true'
 export GTWAY_NAMESP='global'
 export GTWAY_KD='gateway'
 export GTWAY_CLIPOOL='5'
 ```
+
+### Main Files
+
+| File | Purpose |
+| ------ | ------ |
+| requestgateway.go | Logic manager |
+| requestgateway_test.go | Tests |
+ 
+
+### Ancillary Files
+
+| File | Purpose |
+| ------ | ------ |
+| config.go | Boot package parameters, environment var collection |
+| entity.go | Package structs |
+| env | Package environment variables for local/dev installation |
+| gogets | Statements for go-getting required packages |
 
    [auth]: <https://github.com/lidstromberg/auth>
    [GCP]: <https://cloud.google.com/>

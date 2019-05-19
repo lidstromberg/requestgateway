@@ -71,7 +71,7 @@ func preflightConfigLoader() map[string]string {
 	cfm := make(map[string]string)
 
 	//EnvDebugOn controls verbose logging
-	cfm["EnvDebugOn"] = os.Getenv("LB_DEBUGON")
+	cfm["EnvDebugOn"] = os.Getenv("GTWAY_DEBUGON")
 	//EnvGtwayGcpProject is the cloud project to target
 	cfm["EnvGtwayGcpProject"] = os.Getenv("GTWAY_GCP_PROJECT")
 	//EnvGtwayDsNamespace is the datastore namespace

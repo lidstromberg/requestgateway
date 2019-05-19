@@ -18,7 +18,7 @@ func Test_DataRepoConnect(t *testing.T) {
 
 	bc := lbcf.NewConfig(ctx)
 
-	_, err := NewGtwyMgr(ctx, bc)
+	_, err := NewMgr(ctx, bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,7 +27,7 @@ func Test_SetGateway(t *testing.T) {
 	ctx := context.Background()
 	bc := lbcf.NewConfig(ctx)
 
-	gt, err := NewGtwyMgr(ctx, bc)
+	gt, err := NewMgr(ctx, bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func Test_ShouldBeValid(t *testing.T) {
 	ctx := context.Background()
 	bc := lbcf.NewConfig(ctx)
 
-	gt, err := NewGtwyMgr(ctx, bc)
+	gt, err := NewMgr(ctx, bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +60,7 @@ func Test_ShouldNotBeValid(t *testing.T) {
 
 	bc := lbcf.NewConfig(ctx)
 
-	gt, err := NewGtwyMgr(ctx, bc)
+	gt, err := NewMgr(ctx, bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func Test_DeleteGateway(t *testing.T) {
 	ctx := context.Background()
 	bc := lbcf.NewConfig(ctx)
 
-	gt, err := NewGtwyMgr(ctx, bc)
+	gt, err := NewMgr(ctx, bc)
 	if err != nil {
 		t.Fatal(err)
 	}
